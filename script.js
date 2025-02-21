@@ -1,9 +1,9 @@
-const reservations = JSON.parse(localStorage.getItem("reservations")) || [];
+let reservation = JSON.parse(localStorage.getItem("reservation")) || [];
+console.log(reservation);
+document.addEventListener("DOMContentLoaded", updateTable);
 
-document.addEventListener("DOMContentLoaded", displayReservations);
-
+let editingRow = -1;
 const form = document.getElementById("rentalForm");
-const table = document.getElementById("reservationTable");
 const name = document.getElementById("name");
 const email = document.getElementById("email");
 const phone = document.getElementById("phone");
@@ -11,6 +11,9 @@ const carType = document.getElementById("carType");
 const startDate = document.getElementById("startDate");
 const endDate = document.getElementById("endDate");
 const totalCost = document.getElementById("totalCost");
+const table = document.getElementById("reservationTable");
+
+/// error messages
 
 const nameError = document.getElementById("nameError");
 const emailError = document.getElementById("emailError");
@@ -19,227 +22,186 @@ const carTypeError = document.getElementById("carTypeError");
 const startDateError = document.getElementById("startDateError");
 const endDateError = document.getElementById("endDateError");
 
-let editIndex = -1;
+// ACTIONS
+// carType test
+const isValidCarType = () => {
+  return carType.value !== "";
+};
 
-function displayReservations() {
-  table.innerHTML = "";
-  reservations.forEach((reservation, index) => {
-    const row = table.insertRow();
-    row.classList.add(
-      "bg-gray-100",
-      "text-gray-700",
-      "text-center",
-      "divide-x",
-      "divide-orange-300",
-    );
-    row.innerHTML = `
-            <td class="p-2">${reservation.name}</td>
-            <td>${reservation.email}</td>
-            <td>${reservation.phone}</td>
-            <td>${
-              reservation.carType == "50"
-                ? "Ecomony"
-                : reservation.carType == "70"
-                ? "Standard"
-                : "luxury"
-            }</td>
-            <td>${reservation.startDate}</td>
-            <td>${reservation.endDate}</td>
-            <td>${reservation.totalCost}</td>
-            <td>
-              <button onclick="updateReservation(${index})" class="bg-sky-400 text-white text-sm px-3 py-0.5 rounded">Edit</button>
-              <button onclick="deleteReservation(${index})" class="bg-red-400 text-white text-sm px-3 py-0.5 rounded">Del</button>
-            </td>
-        `;
-  });
+// start date test
+const isValidDateS = () =>
+  startDate.value !== "" &&
+  Math.floor(new Date(startDate.value) / (1000 * 60 * 60 * 24)) >=
+    Math.floor(new Date() / (1000 * 60 * 60 * 24));
+
+// end date test
+const isValidDateE = () =>
+  endDate.value !== "" && new Date(endDate.value) >= new Date(startDate.value);
+
+function displayTotalCost() {
+  const rentDays =
+    (new Date(endDate.value).getTime() - new Date(startDate.value).getTime()) /
+    1000 /
+    60 /
+    60 /
+    24;
+  const totalCost1 = Number.parseInt(carType.value) * rentDays;
+  if (isValidCarType && isValidDateS && isValidDateE) {
+    totalCost.value = totalCost1 + " TND";
+  } else totalCost.value = "0 TND";
 }
 
-function addReservation(totalCost) {
-  const reservation = {
-    name: name.value,
-    email: email.value,
-    phone: phone.value,
-    carType: carType.value,
-    startDate: startDate.value,
-    endDate: endDate.value,
-    totalCost: totalCost,
-  };
+carType.addEventListener("input", displayTotalCost);
+startDate.addEventListener("input", displayTotalCost);
+endDate.addEventListener("input", displayTotalCost);
 
-  if (editIndex !== -1) {
-    reservations[editIndex] = reservation;
-    editIndex = -1;
-  } else {
-    reservations.push(reservation);
-  }
-
-  localStorage.setItem("reservations", JSON.stringify(reservations));
-  form.reset();
-  displayReservations();
-}
-
-function updateReservation(index) {
-  const reservation = reservations[index];
-  name.value = reservation.name;
-  email.value = reservation.email;
-  phone.value = reservation.phone;
-  carType.value = reservation.carType;
-  startDate.value = reservation.startDate;
-  endDate.value = reservation.endDate;
-  editIndex = index;
-
-  totalCost.value = reservation.totalCost;
-}
-
-function deleteReservation(index) {
-  reservations.splice(index, 1);
-  localStorage.setItem("reservations", JSON.stringify(reservations));
-  displayReservations();
-}
-
-function validateForm() {
+function isValidForm() {
   let isValid = true;
+  // name test
+  const isValidName = () =>
+    name.value.split(/\s+/).reduce((res, w) => res && w.length >= 3) &&
+    name.value.split(" ").length >= 2;
 
-  if (nameValidator()) {
-    name.classList.add("text-red-500");
+  if (!isValidName()) {
     nameError.classList.remove("hidden");
     isValid = false;
-  } else {
-    name.classList.remove("text-red-500");
-    nameError.classList.add("hidden");
-  }
+  } else nameError.classList.add("hidden");
 
-  if (emailValidator()) {
-    email.classList.add("text-red-500");
+  // email test
+  const isValidEmail = () =>
+    !email.value.startsWith("@") &&
+    email.value.includes("@") &&
+    email.value.includes(".", email.value.indexOf("@")) &&
+    !email.value.endsWith(".");
+
+  if (!isValidEmail()) {
     emailError.classList.remove("hidden");
     isValid = false;
-  } else {
-    email.classList.remove("text-red-500");
-    emailError.classList.add("hidden");
-  }
+  } else emailError.classList.add("hidden");
 
-  if (phoneValidator()) {
-    phone.classList.add("text-red-500");
+  // phone test
+
+  const isValidPhone = () => {
+    const trimedPhone = phone.value.trim().split(" ").join("");
+    const isNotNumber = isNaN(trimedPhone);
+    return !isNotNumber && trimedPhone.length == 8;
+  };
+  if (!isValidPhone()) {
     phoneError.classList.remove("hidden");
     isValid = false;
   } else {
-    phone.classList.remove("text-red-500");
     phoneError.classList.add("hidden");
   }
 
-  if (carType.value === "") {
-    carType.classList.add("text-red-500");
+  if (carType.value == "") {
     carTypeError.classList.remove("hidden");
     isValid = false;
-  } else {
-    carType.classList.remove("text-red-500");
-    carTypeError.classList.add("hidden");
-  }
+  } else carTypeError.classList.add("hidden");
 
-  if (startDateValidator()) {
-    startDate.classList.add("text-red-500");
+  if (!isValidDateS()) {
     startDateError.classList.remove("hidden");
     isValid = false;
-  } else {
-    startDate.classList.remove("text-red-500");
-    startDateError.classList.add("hidden");
-  }
+  } else startDateError.classList.add("hidden");
 
-  if (endDateValidator()) {
-    endDate.classList.add("text-red-500");
+  // end date
+
+  if (!isValidDateE()) {
     endDateError.classList.remove("hidden");
     isValid = false;
-  } else {
-    endDate.classList.remove("text-red-500");
-    endDateError.classList.add("hidden");
-  }
+  } else endDateError.classList.add("hidden");
+
+  // last return
+  return isValid;
+}
+
+// add reservation
+
+function addReservation() {
+  const row = {
+    name: name.value,
+    email: email.value,
+    phone: phone.value,
+    carType: carType.options[carType.selectedIndex].text,
+    startDate: startDate.value,
+    endDate: endDate.value,
+    totalCost: totalCost.value,
+  };
+  reservation.push(row);
+  localStorage.setItem("reservation", JSON.stringify(reservation));
+  updateTable();
+}
+
+function updateTable() {
+  const table = document.getElementById("reservationTable");
+  table.innerHTML = "";
+  reservation.forEach((e, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+    <td>${e.name}</td>
+    <td>${e.email}</td>
+    <td>${e.phone}</td>
+    <td>${e.carType}</td>
+    <td>${e.startDate}</td>
+    <td>${e.endDate}</td>
+    <td>${e.totalCost}</td>
+    <td>
+    <button class="bg-blue-400 px-3 rounded text-xs text-white" onclick="editRow(${i})">Edit</button>
+    <button class="bg-red-400 px-3 rounded text-xs text-white" onclick="deleteRow(${i})">Delete</button>
+    </td>
+  `;
+    tr.classList.add("text-center");
+    table.appendChild(tr);
+  });
+}
+
+// function edit
+function editRow(index) {
+  const row = reservation[index];
+  name.value = row.name;
+  email.value = row.email;
+  phone.value = row.phone;
+  carType.value =
+    row.carType == "Economy ($50/day)"
+      ? "50"
+      : row.carType == "Standard ($70/day)"
+      ? "70"
+      : "100";
+  startDate.value = row.startDate;
+  endDate.value = row.endDate;
+  totalCost.value = row.totalCost;
+  editingRow = index;
+}
+
+//function update
+function updateRow() {
+  console.log(editingRow);
+  const row = {
+    name: name.value,
+    email: email.value,
+    phone: phone.value,
+    carType: carType.options[carType.selectedIndex].text,
+    startDate: startDate.value,
+    endDate: endDate.value,
+    totalCost: totalCost.value,
+  };
+  reservation.splice(editingRow, 1, row);
+  updateTable();
+}
+
+// function delete
+function deleteRow(index) {
+  reservation.splice(index, 1);
+  localStorage.setItem("reservation", JSON.stringify(reservation));
+  updateTable();
+}
+function submitForm(e) {
+  e.preventDefault();
+  const isValid = isValidForm();
+
   if (isValid) {
-    return true;
-  } else {
-    return false;
-  }
-}
-function nameValidator() {
-  const is2Words = name.value.trim().split(" ").length > 1;
-  if (name.value.trim() === "" || !is2Words) {
-    return true;
-  } else {
-    return false;
+    addReservation();
+    form.reset();
   }
 }
 
-function emailValidator() {
-  if (
-    email.value.trim() === "" ||
-    !email.value.includes("@") ||
-    !email.value.includes(".", email.value.indexOf("@"))
-  ) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
-function phoneValidator() {
-  const phoneTrimed = phone.value.split(" ").join("");
-  const isNumber = isNaN(phoneTrimed);
-  if (phoneTrimed.trim() === "" || phoneTrimed.length !== 8 || isNumber) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
-function startDateValidator() {
-  const today = new Date();
-  const startDateValue = new Date(startDate.value);
-  if (!(startDateValue && startDateValue > today)) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
-function endDateValidator() {
-  const startDateValue = new Date(startDate.value);
-  const endDateValue = new Date(endDate.value);
-  if (!(endDateValue && endDateValue > startDateValue)) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
-function calcTotal() {
-  const startDateValue = new Date(startDate.value);
-  const endDateValue = new Date(endDate.value);
-  const diffTime = Math.abs(endDateValue - startDateValue);
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  const carTypeValue = carType.value;
-
-  return diffDays * carTypeValue + " TND";
-}
-
-function submitForm(event) {
-  event.preventDefault();
-  const isValid = validateForm();
-  if (isValid) {
-    totalCost.value = calcTotal();
-    addReservation(calcTotal());
-  } else {
-    totalCost.value = "0 TND";
-  }
-}
-
-function updateTotalCost(event) {
-  event.preventDefault();
-  const isValid = validateForm();
-  if (isValid) {
-    totalCost.value = calcTotal();
-  } else {
-    totalCost.value = "0 TND";
-  }
-}
-
-[name, email, phone, carType, startDate, endDate].forEach((input) =>
-  input.addEventListener("input", (event) => updateTotalCost(event)),
-);
+form.addEventListener("submit", submitForm(e));

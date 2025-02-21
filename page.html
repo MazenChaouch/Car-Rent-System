@@ -113,6 +113,13 @@
         >
           Submit
         </button>
+        <button
+          type="button"
+          onclick="updateRow()"
+          class="w-full bg-emerald-500 text-white p-2 hover:bg-emerald-600"
+        >
+          Update
+        </button>
 
         <!-- Total Cost -->
         <div class="flex justify-center space-x-2">
@@ -148,6 +155,6 @@
         <tbody id="reservationTable"></tbody>
       </table>
     </div>
-    <script src="script.js"></script>
+    <script type="module" src="script.js" defer></script>
   </body>
 </html>
